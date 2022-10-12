@@ -85,7 +85,9 @@ class Coast:
             chunks (Dict): Chunks to use in Dask [default None].
         """
         info(f"Loading a single file ({file} for {get_slug(self)}")
-        self.dataset = xr.open_dataset(file, chunks=chunks)
+        with xr.open_dataset(file, chunks=chunks) as file:
+            self.dataset = file
+        # self.dataset = xr.open_dataset(file, chunks=chunks)
 
     def load_multiple(self, directory_to_files: str, chunks: Dict = None):
         """Loads multiple files from directory into dataset variable.
@@ -95,8 +97,11 @@ class Coast:
             chunks (Dict): Chunks to use in Dask [default None].
         """
         info(f"Loading a directory ({directory_to_files}) for {get_slug(self)}")
-        self.dataset = xr.open_mfdataset(directory_to_files, chunks=chunks, parallel=True, combine="by_coords")
-
+        # unsafe
+        # self.dataset = xr.open_mfdataset(directory_to_files, chunks=chunks, parallel=True, combine="by_coords")
+        with xr.open_mfdataset(directory_to_files, chunks=chunks, parallel=True, combine="by_coords") as files:
+            self.dataset = files
+  
     def load_dataset(self, dataset: xr.Dataset):
         """Loads a dataset.
 

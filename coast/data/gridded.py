@@ -8,6 +8,7 @@ import warnings
 import gsw
 import numpy as np
 import xarray as xr
+from netCDF4 import num2date
 
 from .._utils import general_utils, stats_util
 from .coast import Coast
@@ -1162,20 +1163,54 @@ class Gridded(Coast):  # TODO Complete this docstring
 
     def calculate_area(self):
         """
-        Calculates a 2D area for the gridded dataset, using 
+        Calculates a 2D area for the gridded dataset, using
         NEMO's fn_domain input (mesh_mask.nc)
+
+        Adds output area as object, self.area
+
+        Returns
+        -------
+        area:
+            2D array of cell areas.
         """
         if self.fn_domain is None:
-            error("No NEMO domain specified, can not calculate area")
+            error("No domain specified, can not calculate area")
+
+        # Check if area already exists:
+        try:
+            area = self.area
+            return area
+        except AttributeError:
+            # area doesn't exist and needs to be calculated:
+            pass
+
         self.filename_domain = self.fn_domain  # store domain fileanme
         dataset_domain = self.load_domain(self.fn_domain, self.config.chunks)
-        print('dataset_domain', dataset_domain)
-        print([key for key in dataset_domain.variables.keys()])
-    
-        area = dataset_domain.variables['e2'][:].values.squeeze() * dataset_domain.variables['e1'][:].values.squeeze()
-        print('area', area) 
-        #self.variables['area'] = {}
+        debug('dataset_domain', dataset_domain)
+
+        # Is there some way to set e2 and e1 to be specified in the config?
+        area = dataset_domain.variables['e2'][:].values.squeeze()
+        area *= dataset_domain.variables['e1'][:].values.squeeze()
+
+        debug('Calculated area: ', area)
         self.area = area
         return area
 
-    
+    def add_datetimes(self):
+        """
+        Creates times as datetime
+        Uses the netcdf's built in time, units and calendar.
+        """
+        try:
+            return self.datetimes
+        except AttributeError:
+            pass
+
+        times = self.dataset.time
+        print(times)
+        datetimes = num2date(times.values, times.units, times.calendar) 
+        self.dataset.datetimes = datetimes
+        info('Calculated dates:', datetimes)
+        return datetimes
+
+
